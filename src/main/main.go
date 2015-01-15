@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"time"
 
 	"github.com/spf13/viper"
@@ -23,10 +24,14 @@ func main() {
 		writes = viper.GetStringMapString("writes")
 	}
 
-	RunBenchmark(Config{
+	result := RunBenchmark(Config{
 		host:    viper.GetString("host"),
 		timeout: (time.Duration(viper.GetInt("host")) * time.Second),
 		reads:   reads,
 		writes:  writes,
 	})
+
+	for _, result := range result {
+		log.Printf("%s (%s) completed in %d", result.name, result.group, result.timeMs)
+	}
 }

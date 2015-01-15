@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -14,6 +13,12 @@ type Config struct {
 	host          string
 	timeout       time.Duration
 	reads, writes map[string]string
+}
+
+// Result is
+type Result struct {
+	name, group string
+	timeMs      int64
 }
 
 func makeTimestamp() int64 {
@@ -66,27 +71,26 @@ func timedPost(uri string, body string, timeout time.Duration) (int64, error) {
 }
 
 // RunBenchmark runs all benchmarks
-func RunBenchmark(config Config) {
-
-	fmt.Println(config.reads)
-	fmt.Println(config.writes)
+func RunBenchmark(config Config) map[string]Result {
 
 	log.Printf("Starting benchmark on kairosdb host %s...\n", config.host)
 
-	readResults := make(map[string]int64)
+	readResults := make(map[string]Result)
 
 	// Benchmark version endpoint
-	readResults["version"] = timedGet(config.host + "/api/v1/version")
+	readResults["version"] = Result{name: "version", group: "read", timeMs: timedGet(config.host + "/api/v1/version")}
 
 	// Run configured read benchmarks
 	for name, query := range config.reads {
+
 		time, err := timedPost(config.host+"/api/v1/datapoints/query", query, config.timeout)
 		if err != nil {
-			log.Printf("failed read benchmark %s because %s \n", name, err)
+			log.Printf("Failed read benchmark %s because %s \n", name, err)
 			continue
 		}
-		readResults[name] = time
+
+		readResults[name] = Result{name: name, group: "read", timeMs: time}
 	}
 
-	fmt.Println(readResults)
+	return readResults
 }
