@@ -1,17 +1,9 @@
 package main
 
-import (
-	"bytes"
-	"errors"
-	"log"
-	"net/http"
-	"time"
-)
+import "log"
 
 // Config defines expected values to run benchark
-type Config struct {
-	host          string
-	timeout       time.Duration
+type RunList struct {
 	reads, writes map[string]string
 }
 
@@ -21,76 +13,43 @@ type Result struct {
 	timeMs      int64
 }
 
-func makeTimestamp() int64 {
-	return time.Now().UnixNano() / int64(time.Millisecond)
-}
-
-func timedGet(uri string) int64 {
-
-	start := makeTimestamp()
-
-	res, err := http.Get(uri)
-	defer res.Body.Close()
-
-	if err != nil {
-		log.Panic(err)
-	}
-
-	if err != nil {
-		log.Panic(err)
-	}
-
-	end := makeTimestamp()
-
-	return (end - start)
-}
-
-func timedPost(uri string, body string, timeout time.Duration) (int64, error) {
-
-	start := makeTimestamp()
-
-	req, err := http.NewRequest("POST", uri, bytes.NewBuffer([]byte(body)))
-	req.Header.Set("Content-Type", "application/json")
-
-	//create HTTP client
-	client := &http.Client{Timeout: timeout}
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	if resp.Status != "200 OK" {
-		return 0, errors.New("Response was non-200: " + resp.Status)
-	}
-
-	end := makeTimestamp()
-
-	return (end - start), nil
-}
-
 // RunBenchmark runs all benchmarks
-func RunBenchmark(config Config) map[string]Result {
+func RunBenchmark(kdb Kairosdb, runList RunList) map[string]Result {
 
-	log.Printf("Starting benchmark on kairosdb host %s...\n", config.host)
+	log.Printf("Starting benchmark on kairosdb host %s...\n", kdb.host)
 
-	readResults := make(map[string]Result)
+	results := make(map[string]Result)
 
-	// Benchmark version endpoint
-	readResults["version"] = Result{name: "version", group: "read", timeMs: timedGet(config.host + "/api/v1/version")}
+	// Benchmark version endpoint to get a baseline for communicating with kairos
+	getTime, err := kdb.TimedGet("/api/v1/version")
+	if err != nil {
+		log.Printf("Failed read benchmark version because %s \n", err)
+	}
+	results["version"] = Result{name: "version", group: "read", timeMs: getTime}
 
 	// Run configured read benchmarks
-	for name, query := range config.reads {
+	for name, query := range runList.reads {
 
-		time, err := timedPost(config.host+"/api/v1/datapoints/query", query, config.timeout)
+		time, err := kdb.TimedPost("/api/v1/datapoints/query", query)
 		if err != nil {
 			log.Printf("Failed read benchmark %s because %s \n", name, err)
 			continue
 		}
 
-		readResults[name] = Result{name: name, group: "read", timeMs: time}
+		results["read."+name] = Result{name: name, group: "read", timeMs: time}
 	}
 
-	return readResults
+	// Run configured write benchmarks
+	for name, datapoints := range runList.writes {
+
+		time, err := kdb.TimedPost("/api/v1/datapoints", datapoints)
+		if err != nil {
+			log.Printf("Failed write benchmark %s because %s \n", name, err)
+			continue
+		}
+
+		results["write."+name] = Result{name: name, group: "write", timeMs: time}
+	}
+
+	return results
 }
