@@ -1,0 +1,5 @@
+host: "http://localhost:8080"
+timeout: 5
+reads:
+    small: '{"metrics":[{"tags":{},"name":"kairosdb.jvm.free_memory","aggregators":[{"name":"sum","align_sampling":true,"sampling":{"value":"1","unit":"minutes"}}]}],"cache_time":0,"start_relative":{"value":"1","unit":"hours"}}'
+    large: '{"metrics":[{"tags":{},"name":"kairosdb.jvm.free_memory","aggregators":[{"name":"sum","align_sampling":true,"sampling":{"value":"1","unit":"minutes"}}]}],"cache_time":0,"start_relative":{"value":"12","unit":"hours"}}'
