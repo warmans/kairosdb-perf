@@ -1,8 +1,17 @@
+# host to benchmark
 host: "http://localhost:8080"
+
+# read/write timeout
 timeout: 5
+
+# log results back to kairosdb under kairosdb.benchmark.result metric
 logback: true
+
+#name: query pairs
 reads:
     small: '{"metrics":[{"tags":{},"name":"kairosdb.jvm.free_memory","aggregators":[{"name":"sum","align_sampling":true,"sampling":{"value":"1","unit":"minutes"}}]}],"cache_time":0,"start_relative":{"value":"1","unit":"hours"}}'
     large: '{"metrics":[{"tags":{},"name":"kairosdb.jvm.free_memory","aggregators":[{"name":"sum","align_sampling":true,"sampling":{"value":"1","unit":"minutes"}}]}],"cache_time":0,"start_relative":{"value":"12","unit":"hours"}}'
+
+#name: query pairs
 writes:
     single: '[{"name":"kairosdb.benchmark.tmp","timestamp":12345678,"value":100,"tags":{"tag1":"tag1", "tag2":"tag2"}}]'
