@@ -1,5 +1,5 @@
-PREFIX=${DESTDIR}/usr/local
-GOBIN=${PREFIX}/bin
+PREFIX=/usr/local
+GOBIN=${DESTDIR}${PREFIX}/bin
 
 build:
 	go get
