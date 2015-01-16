@@ -13,7 +13,7 @@ type RunList struct {
 	reads, writes map[string]string
 }
 
-// Results are stored in Result instances
+// Result instances hold results of benchmarks
 type Result struct {
 	name, group string
 	timeMs      int64
