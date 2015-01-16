@@ -67,6 +67,7 @@ func main() {
 
 	// todo: fix config path
 	viper.AddConfigPath("./config/")
+	viper.AddConfigPath("/etc/kairosdb-pref/")
 	viper.ReadInConfig()
 
 	// Kairosdb client
