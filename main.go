@@ -66,7 +66,7 @@ func main() {
 	viper.SetConfigName("config")
 
 	// todo: fix config path
-	viper.AddConfigPath("/var/www/kairosdb-perf/config/")
+	viper.AddConfigPath("./config/")
 	viper.ReadInConfig()
 
 	// Kairosdb client
@@ -111,7 +111,10 @@ func main() {
 	// flush new datapoints back to kairosdb
 	if viper.GetBool("logback") {
 		log.Print("logging results back to kairosdb")
-		kdb.AddDatapoints(datapoints)
+		err := kdb.AddDatapoints(datapoints)
+		if err != nil {
+			log.Print(err)
+		}
 	} else {
 		log.Print("Discarding result (logback is false)")
 	}
