@@ -4,6 +4,9 @@ host: "http://localhost:8080"
 # read/write timeout
 timeout: 5
 
+# frequency in seconds with wich to run benchmark in daemon mode
+frequency: 60
+
 # log results back to kairosdb under kairosdb.benchmark.result metric
 logback: true
 
