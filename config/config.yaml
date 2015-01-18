@@ -5,15 +5,20 @@ host: "http://localhost:8080"
 timeout: 5
 
 # frequency in seconds with wich to run benchmark in daemon mode
-frequency: 0
+frequency: 60
 
 # log results back to kairosdb under kairosdb.benchmark.result metric
 logback: true
 
+# additional tags included in logbacks. useful for splitting  results by host-specific attibutes e.g. datacenter
+# specify tags as tag: value pairs e.g. datacenter: DC1
+logback_tags:
+
+
 #name: query pairs
 reads:
-    small: '{"metrics":[{"tags":{},"name":"kairosdb.jvm.free_memory","aggregators":[{"name":"sum","align_sampling":true,"sampling":{"value":"1","unit":"minutes"}}]}],"cache_time":0,"start_relative":{"value":"1","unit":"hours"}}'
-    large: '{"metrics":[{"tags":{},"name":"kairosdb.jvm.free_memory","aggregators":[{"name":"sum","align_sampling":true,"sampling":{"value":"1","unit":"minutes"}}]}],"cache_time":0,"start_relative":{"value":"12","unit":"hours"}}'
+    small: '{"metrics":[{"tags":{},"name":"kairosdb.jvm.free_memory","aggregators":[{"name":"sum","align_sampling":true,"sampling":{"value":"10","unit":"minutes"}}]}],"cache_time":0,"start_relative":{"value":"1","unit":"days"}}'
+    large: '{"metrics":[{"tags":{},"name":"kairosdb.jvm.free_memory","aggregators":[{"name":"sum","align_sampling":true,"sampling":{"value":"10","unit":"minutes"}}]}],"cache_time":0,"start_relative":{"value":"7","unit":"days"}}'
 
 #name: query pairs
 writes:

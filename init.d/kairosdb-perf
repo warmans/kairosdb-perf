@@ -22,6 +22,15 @@ fi
 case "$1" in
 	start)
 	printf "%-50s" "Starting $NAME..."
+
+	if [ -f $PIDFILE ]; then
+		PID=`cat $PIDFILE`
+		if [ -n "`ps axf | grep ${PID} | grep -v grep`" ]; then
+			echo "Already running"
+			exit 1
+		fi
+	fi
+
 	cd $DAEMON_PATH
 	PID=`$DAEMON $DAEMONOPTS >> $LOGFILE 2>&1 & echo $!`
 	if [ -z $PID ]; then
