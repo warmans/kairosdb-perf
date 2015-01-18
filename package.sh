@@ -1,4 +1,4 @@
-set -e 
+set -e
 
 #help text
 if [ "$1" == "help" ]; then
@@ -7,24 +7,21 @@ if [ "$1" == "help" ]; then
 fi
 
 #validate fpm is installed
-if [ -z "$(which fpm)" ]; then 
+if [ -z "$(which fpm)" ]; then
     printf "error:\nPackaging requires effing package manager (fpm) to run.\nsee https://github.com/jordansissel/fpm\n"
     exit 1
 fi
 
 #set target package format
 TARGET=$1
-if [ -z "$TARGET" ]; then 
+if [ -z "$TARGET" ]; then
     TARGET="rpm"
-fi 
+fi
 
 echo "Building $TARGET package..."
 
 #build in pkg directory
 export DESTDIR=pkg
-
-#run default
-make
 
 #run install using dest DESTDIR prefix
 make install PREFIX=/usr
@@ -32,7 +29,7 @@ make install PREFIX=/usr
 #clean
 if [ -d "dist" ]; then
     rm -f dist/*.$TARGET
-else 
+else
     mkdir dist
 fi
 
