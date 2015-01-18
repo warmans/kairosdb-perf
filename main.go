@@ -19,9 +19,9 @@ func main() {
 	// Setup configuration
 	viper.SetConfigName("config")
 
-	// todo: fix config path
-	viper.AddConfigPath("./config/")
-	viper.AddConfigPath("/etc/kairosdb-pref/")
+	viper.AddConfigPath("./config/")           //dev config (overrides live)
+	viper.AddConfigPath("/etc/kairosdb-pref/") //live config
+
 	viper.ReadInConfig()
 
 	if *daemon == true {
@@ -36,6 +36,11 @@ func main() {
 
 		var lastRunTs int32
 		resultChannel := make(chan []Result)
+
+		//don't let anyone DDoS themselves
+		if viper.GetInt("frequency") == 0 {
+			log.Panic("benchmark frequency must be greater than 0")
+		}
 
 		for /* ever */ {
 
@@ -67,12 +72,11 @@ func main() {
 		}
 	} else {
 		printResults(run())
-
 	}
 }
 
 func run() []Result {
-	// Kairosdb client
+
 	kdb := Kairosdb{
 		client: &http.Client{Timeout: (time.Duration(viper.GetInt("host")) * time.Second)},
 		host:   viper.GetString("host"),
