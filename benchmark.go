@@ -13,21 +13,25 @@ type Result struct {
 	err         error
 }
 
-// RunBenchmark runs all benchmarks
-func RunBenchmark(kdb *Kairosdb, runList *RunList) []Result {
+// Benchmark class
+type Benchmark struct {
+	kdb     *Kairosdb
+	results []Result
+}
 
-	var results []Result
+// Execute runs all benchmarks in supplied RunList
+func (benchmark *Benchmark) Execute(runList *RunList) []Result {
 
-	results = doVersion(kdb, results)
-	results = doReads(runList.reads, kdb, results)
-	results = doWrites(runList.writes, kdb, results)
+	benchmark.doVersion()
+	benchmark.doPostBenchmark(runList.reads, "read", "/api/v1/datapoints/query")
+	benchmark.doPostBenchmark(runList.writes, "write", "/api/v1/datapoints")
 
-	return results
+	return benchmark.results
 }
 
 // doVersion: Benchmark version endpoint to get a baseline for communicating with kairos
-func doVersion(kdb *Kairosdb, results []Result) []Result {
-	timeMs, err := kdb.TimedGet("/api/v1/version")
+func (benchmark *Benchmark) doVersion() {
+	timeMs, err := benchmark.kdb.TimedGet("/api/v1/version")
 
 	result := Result{name: "version", group: "version", timeMs: timeMs}
 
@@ -38,17 +42,17 @@ func doVersion(kdb *Kairosdb, results []Result) []Result {
 		result.success = true
 	}
 
-	return append(results, result)
+	benchmark.results = append(benchmark.results, result)
 }
 
-//doReads: Perform read benchmark
-func doReads(reads map[string]string, kdb *Kairosdb, results []Result) []Result {
+// doPostBenchmark: runs a POST request against a resource and appends result to results
+func (benchmark *Benchmark) doPostBenchmark(queries map[string]string, group string, path string) {
 
-	for name, query := range reads {
+	for name, query := range queries {
 
-		timeMs, err := kdb.TimedPost("/api/v1/datapoints/query", query)
+		timeMs, err := benchmark.kdb.TimedPost(path, query)
 
-		result := Result{name: name, group: "read", timeMs: timeMs}
+		result := Result{name: name, group: group, timeMs: timeMs}
 
 		if err != nil {
 			result.err = err
@@ -57,30 +61,7 @@ func doReads(reads map[string]string, kdb *Kairosdb, results []Result) []Result 
 			result.success = true
 		}
 
-		results = append(results, result)
+		benchmark.results = append(benchmark.results, result)
 	}
 
-	return results
-}
-
-//doWrites: Perform write benchmark
-func doWrites(writes map[string]string, kdb *Kairosdb, results []Result) []Result {
-
-	for name, query := range writes {
-
-		timeMs, err := kdb.TimedPost("/api/v1/datapoints", query)
-
-		result := Result{name: name, group: "write", timeMs: timeMs}
-
-		if err != nil {
-			result.err = err
-			result.success = false
-		} else {
-			result.success = true
-		}
-
-		results = append(results, result)
-	}
-
-	return results
 }

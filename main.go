@@ -93,13 +93,10 @@ func run() []Result {
 		writes = viper.GetStringMapString("writes")
 	}
 
-	runList := RunList{
-		reads:  reads,
-		writes: writes,
-	}
-
 	// Run benchmarks and return Result
-	result := RunBenchmark(&kdb, &runList)
+	runList := RunList{reads: reads, writes: writes}
+	benchmark := Benchmark{kdb: &kdb}
+	result := benchmark.Execute(&runList)
 
 	// Output result
 	var datapoints []Datapoint

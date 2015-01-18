@@ -11,7 +11,7 @@ frequency: 60
 logback: true
 
 # additional tags included in logbacks. useful for splitting  results by host-specific attibutes e.g. datacenter
-# specify tags as tag: value pairs e.g. datacenter: DC1
+# specify tags as tag: value pairs e.g. datacenter: "DC1"
 logback_tags:
 
 
