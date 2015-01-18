@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/spf13/viper"
@@ -103,11 +104,26 @@ func run() []Result {
 	// Output result
 	var datapoints []Datapoint
 	for _, result := range result {
+		hostname, err := os.Hostname()
+
+		if err != nil {
+			hostname = "unknown"
+			log.Printf("os.Hostname returned error: %s", err)
+		}
+
+		tags := map[string]string{"name": result.name, "group": result.group, "host": hostname}
+
+		if viper.IsSet("logback_tags") {
+			for name, value := range viper.GetStringMapString("logback_tags") {
+				tags[name] = value
+			}
+		}
+
 		datapoint := Datapoint{
 			Name:      "kairosdb.benchmark.result",
 			Timestamp: kdb.MsTime(),
 			Value:     result.timeMs,
-			Tags:      map[string]string{"name": result.name, "group": result.group},
+			Tags:      tags,
 		}
 
 		datapoints = append(datapoints, datapoint)
@@ -115,13 +131,10 @@ func run() []Result {
 
 	// flush new datapoints back to kairosdb
 	if viper.GetBool("logback") {
-		log.Print("logging results back to kairosdb")
 		err := kdb.AddDatapoints(datapoints)
 		if err != nil {
 			log.Printf("logback failed with error: %s", err)
 		}
-	} else {
-		log.Print("Discarding result (logback is false)")
 	}
 
 	return result
