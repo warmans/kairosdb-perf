@@ -1,4 +1,4 @@
 pkg/*
 bin/*
-kairosdb-perf
+/kairosdb-perf
 dist
