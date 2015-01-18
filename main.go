@@ -1,6 +1,8 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -8,69 +10,73 @@ import (
 	"github.com/spf13/viper"
 )
 
-// RunList defines the queries to be run by the benchmark [name]query
-type RunList struct {
-	reads, writes map[string]string
-}
-
-// Result instances hold results of benchmarks
-type Result struct {
-	name, group string
-	timeMs      int64
-}
-
-// RunBenchmark runs all benchmarks
-func RunBenchmark(kdb Kairosdb, runList RunList) map[string]Result {
-
-	log.Printf("Starting benchmark on kairosdb host %s...\n", kdb.host)
-
-	results := make(map[string]Result)
-
-	// Benchmark version endpoint to get a baseline for communicating with kairos
-	getTime, err := kdb.TimedGet("/api/v1/version")
-	if err != nil {
-		log.Printf("Failed read benchmark version because %s \n", err)
-	}
-	results["version"] = Result{name: "version", group: "read", timeMs: getTime}
-
-	// Run read benchmarks
-	for name, query := range runList.reads {
-
-		time, err := kdb.TimedPost("/api/v1/datapoints/query", query)
-		if err != nil {
-			log.Printf("Failed read benchmark %s because %s \n", name, err)
-			continue
-		}
-
-		results["read."+name] = Result{name: name, group: "read", timeMs: time}
-	}
-
-	// Run write benchmarks
-	for name, datapoints := range runList.writes {
-
-		time, err := kdb.TimedPost("/api/v1/datapoints", datapoints)
-		if err != nil {
-			log.Printf("Failed write benchmark %s because %s \n", name, err)
-			continue
-		}
-
-		results["write."+name] = Result{name: name, group: "write", timeMs: time}
-	}
-
-	return results
-}
-
 func main() {
+
+	//args
+	daemon := flag.Bool("d", false, "run forever")
+	flag.Parse()
 
 	// Setup configuration
 	viper.SetConfigName("config")
 
-	// todo: fix config path
-	viper.AddConfigPath("./config/")
-	viper.AddConfigPath("/etc/kairosdb-pref/")
+	viper.AddConfigPath("./config/")           //dev config (overrides live)
+	viper.AddConfigPath("/etc/kairosdb-pref/") //live config
+
 	viper.ReadInConfig()
 
-	// Kairosdb client
+	if *daemon == true {
+
+		if !viper.IsSet("frequency") {
+			log.Panic("frequency option missing from config. Cannot run daemon")
+		}
+
+		fmt.Println("---------------------------------------------------------------------")
+		fmt.Printf("Starting Daemon... (benchmark every %v seconds)\n", viper.GetInt("frequency"))
+		fmt.Println("---------------------------------------------------------------------")
+
+		var lastRunTs int32
+		resultChannel := make(chan []Result)
+
+		//don't let anyone DDoS themselves
+		if viper.GetInt("frequency") == 0 {
+			log.Panic("benchmark frequency must be greater than 0")
+		}
+
+		for /* ever */ {
+
+			if int32(time.Now().Unix()) >= lastRunTs+int32(viper.GetInt("frequency")) {
+
+				log.Println("Staring benchmark... ")
+
+				lastRunTs = int32(time.Now().Unix())
+
+				//always use an up-to-date config
+				viper.ReadInConfig()
+
+				//exeute benchmark
+				go func(c chan []Result) {
+					resultChannel <- run()
+				}(resultChannel)
+			}
+
+			select {
+
+			//print results when ready
+			case result := <-resultChannel:
+				printResults(result)
+
+			//check for pending benchmarks every second
+			case <-time.After(time.Second):
+				continue
+			}
+		}
+	} else {
+		printResults(run())
+	}
+}
+
+func run() []Result {
+
 	kdb := Kairosdb{
 		client: &http.Client{Timeout: (time.Duration(viper.GetInt("host")) * time.Second)},
 		host:   viper.GetString("host"),
@@ -92,13 +98,11 @@ func main() {
 	}
 
 	// Run benchmarks and return Result
-	result := RunBenchmark(kdb, runList)
+	result := RunBenchmark(&kdb, &runList)
 
 	// Output result
 	var datapoints []Datapoint
 	for _, result := range result {
-		log.Printf("%s (%s) completed in %d ms", result.name, result.group, result.timeMs)
-
 		datapoint := Datapoint{
 			Name:      "kairosdb.benchmark.result",
 			Timestamp: kdb.MsTime(),
@@ -114,9 +118,23 @@ func main() {
 		log.Print("logging results back to kairosdb")
 		err := kdb.AddDatapoints(datapoints)
 		if err != nil {
-			log.Print(err)
+			log.Printf("logback failed with error: %s", err)
 		}
 	} else {
 		log.Print("Discarding result (logback is false)")
+	}
+
+	return result
+}
+
+func printResults(result []Result) {
+	log.Println("RESULTS:")
+	for _, result := range result {
+		if result.success {
+			log.Printf("[%s] %s success in %d ms", result.group, result.name, result.timeMs)
+		} else {
+			log.Printf("[%s] %s failed due to: %s", result.group, result.name, result.err)
+		}
+
 	}
 }
