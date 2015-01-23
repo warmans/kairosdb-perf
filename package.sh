@@ -12,8 +12,8 @@ if [ "$TARGET" == "help" ]; then
 fi
 
 #validate fpm is installed
-if [ -z "$(which fpm)" ]; then
-    printf "error:\nPackaging requires effing package manager (fpm) to run.\nsee https://github.com/jordansissel/fpm\n"
+if ! which fpm &>/dev/null; then
+    printf "error: Packaging requires effing package manager (fpm) to run.\nsee https://github.com/jordansissel/fpm\n"
     exit 1
 fi
 
