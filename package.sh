@@ -17,13 +17,11 @@ if ! which fpm &>/dev/null; then
     exit 1
 fi
 
-echo "Building $TARGET package..."
-
 #build in pkg directory
 export DESTDIR=pkg
 
 #run install using dest DESTDIR prefix
-make install PREFIX=/usr
+make install PREFIX=/usr --silent
 
 #clean
 if [ -d "dist" ]; then
