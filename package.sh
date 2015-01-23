@@ -1,7 +1,12 @@
-set -e
+#!/bin/bash
+set -euo pipefail
+IFS=$'\n\t'
+
+#set target package format
+TARGET=${1-rpm}
 
 #help text
-if [ "$1" == "help" ]; then
+if [ "$TARGET" == "help" ]; then
     echo "Usage ./package.sh [help|rpm|deb|solaris|puppet]"
     exit
 fi
@@ -10,12 +15,6 @@ fi
 if [ -z "$(which fpm)" ]; then
     printf "error:\nPackaging requires effing package manager (fpm) to run.\nsee https://github.com/jordansissel/fpm\n"
     exit 1
-fi
-
-#set target package format
-TARGET=$1
-if [ -z "$TARGET" ]; then
-    TARGET="rpm"
 fi
 
 echo "Building $TARGET package..."
